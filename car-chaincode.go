@@ -1,29 +1,14 @@
 /*
-Copyright IBM Corp. 2016 All Rights Reserved.
+Copyright Uhuchain. All Rights Reserved.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+SPDX-License-Identifier: Apache-2.0
 */
 
-package chaincode
-
-//WARNING - this chaincode's ID is hard-coded in chaincode_example04 to illustrate one way of
-//calling chaincode from a chaincode. If this example is modified, chaincode_example04.go has
-//to be modified as well with the new ID of chaincode_example02.
-//chaincode_example05 show's how chaincode ID can be passed in as a parameter instead of
-//hard-coding.
+package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -34,8 +19,9 @@ import (
 type CarChaincode struct {
 }
 
+// Init car chaincode
 func (t *CarChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	fmt.Println("ex02 Init")
+	log.Println("Init car chaincode")
 	_, args := stub.GetFunctionAndParameters()
 	var A, B string    // Entities
 	var Aval, Bval int // Asset holdings
@@ -72,6 +58,7 @@ func (t *CarChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
 }
 
+// Invoke a function from the chaincode
 func (t *CarChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Println("ex02 Invoke")
 	function, args := stub.GetFunctionAndParameters()
@@ -84,6 +71,8 @@ func (t *CarChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	} else if function == "query" {
 		// the old "Query" is now implemtned in invoke
 		return t.query(stub, args)
+	} else if function == "write" {
+		return t.write(stub, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"delete\" \"query\"")
@@ -158,6 +147,27 @@ func (t *CarChaincode) delete(stub shim.ChaincodeStubInterface, args []string) p
 	err := stub.DelState(A)
 	if err != nil {
 		return shim.Error("Failed to delete state")
+	}
+
+	return shim.Success(nil)
+}
+
+// Write a value with a given ID onto the ledger
+func (t *CarChaincode) write(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var ID, Value string // Entities
+	var err error
+
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
+	}
+
+	ID = args[0]
+	Value = args[1]
+
+	// Write the state back to the ledger
+	err = stub.PutState(ID, []byte(Value))
+	if err != nil {
+		return shim.Error(err.Error())
 	}
 
 	return shim.Success(nil)
