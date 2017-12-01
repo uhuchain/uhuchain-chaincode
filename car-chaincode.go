@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
+	"github.com/uhuchain/uhuchain-core/usecases"
 )
 
 // CarChaincode example simple Chaincode implementation
@@ -62,6 +63,8 @@ func (t *CarChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 func (t *CarChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Println("ex02 Invoke")
 	function, args := stub.GetFunctionAndParameters()
+	carProvider := NewHlfCarProvider(stub)
+	carUsecase := usecases.NewCarUsecase(&carProvider)
 	if function == "invoke" {
 		// Make payment of X units from A to B
 		return t.invoke(stub, args)
@@ -71,8 +74,8 @@ func (t *CarChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	} else if function == "query" {
 		// the old "Query" is now implemtned in invoke
 		return t.query(stub, args)
-	} else if function == "write" {
-		return t.write(stub, args)
+	} else if function == "saveCar" {
+		return t.saveCar(stub, carUsecase, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"delete\" \"query\"")
@@ -153,22 +156,13 @@ func (t *CarChaincode) delete(stub shim.ChaincodeStubInterface, args []string) p
 }
 
 // Write a value with a given ID onto the ledger
-func (t *CarChaincode) write(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var ID, Value string // Entities
-	var err error
-
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
+func (t *CarChaincode) saveCar(stub shim.ChaincodeStubInterface, usecase *usecases.CarUsecase, args []string) pb.Response {
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting ")
 	}
+	car := args[1]
 
-	ID = args[0]
-	Value = args[1]
-
-	// Write the state back to the ledger
-	err = stub.PutState(ID, []byte(Value))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
+	usecase.AddCar(car)
 
 	return shim.Success(nil)
 }
