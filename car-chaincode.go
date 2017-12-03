@@ -11,6 +11,8 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/uhuchain/uhuchain-core/models"
+
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 	"github.com/uhuchain/uhuchain-core/usecases"
@@ -61,14 +63,11 @@ func (t *CarChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 
 // Invoke a function from the chaincode
 func (t *CarChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
-	fmt.Println("ex02 Invoke")
+	fmt.Println("car chaincode Invoke")
 	function, args := stub.GetFunctionAndParameters()
 	carProvider := NewHlfCarProvider(stub)
 	carUsecase := usecases.NewCarUsecase(&carProvider)
-	if function == "invoke" {
-		// Make payment of X units from A to B
-		return t.invoke(stub, args)
-	} else if function == "delete" {
+	if function == "delete" {
 		// Deletes an entity from its state
 		return t.delete(stub, args)
 	} else if function == "query" {
@@ -76,66 +75,11 @@ func (t *CarChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.query(stub, args)
 	} else if function == "saveCar" {
 		return t.saveCar(stub, carUsecase, args)
+	} else if function == "getCar" {
+		return t.saveCar(stub, carUsecase, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"delete\" \"query\"")
-}
-
-// Transaction makes payment of X units from A to B
-func (t *CarChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var A, B string    // Entities
-	var Aval, Bval int // Asset holdings
-	var X int          // Transaction value
-	var err error
-
-	if len(args) != 3 {
-		return shim.Error("Incorrect number of arguments. Expecting 3")
-	}
-
-	A = args[0]
-	B = args[1]
-
-	// Get the state from the ledger
-	// TODO: will be nice to have a GetAllState call to ledger
-	Avalbytes, err := stub.GetState(A)
-	if err != nil {
-		return shim.Error("Failed to get state")
-	}
-	if Avalbytes == nil {
-		return shim.Error("Entity not found")
-	}
-	Aval, _ = strconv.Atoi(string(Avalbytes))
-
-	Bvalbytes, err := stub.GetState(B)
-	if err != nil {
-		return shim.Error("Failed to get state")
-	}
-	if Bvalbytes == nil {
-		return shim.Error("Entity not found")
-	}
-	Bval, _ = strconv.Atoi(string(Bvalbytes))
-
-	// Perform the execution
-	X, err = strconv.Atoi(args[2])
-	if err != nil {
-		return shim.Error("Invalid transaction amount, expecting a integer value")
-	}
-	Aval = Aval - X
-	Bval = Bval + X
-	fmt.Printf("Aval = %d, Bval = %d\n", Aval, Bval)
-
-	// Write the state back to the ledger
-	err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	err = stub.PutState(B, []byte(strconv.Itoa(Bval)))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	return shim.Success(nil)
 }
 
 // Deletes an entity from state
@@ -155,16 +99,41 @@ func (t *CarChaincode) delete(stub shim.ChaincodeStubInterface, args []string) p
 	return shim.Success(nil)
 }
 
-// Write a value with a given ID onto the ledger
+// Write a car with a given ID onto the ledger
 func (t *CarChaincode) saveCar(stub shim.ChaincodeStubInterface, usecase *usecases.CarUsecase, args []string) pb.Response {
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting ")
 	}
-	car := args[1]
-
-	usecase.AddCar(car)
-
+	carValue := []byte(args[1])
+	car := models.Car{}
+	err := car.UnmarshalBinary(carValue)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	err = usecase.SaveCar(car)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 	return shim.Success(nil)
+}
+
+func (t *CarChaincode) getCar(stub shim.ChaincodeStubInterface, usecase *usecases.CarUsecase, args []string) pb.Response {
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting ")
+	}
+	carID, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	car, err := usecase.GetCar(carID)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	carValue, err := car.MarshalBinary()
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(carValue)
 }
 
 // query callback representing the query of a chaincode
