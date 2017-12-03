@@ -67,6 +67,7 @@ func (t *CarChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	function, args := stub.GetFunctionAndParameters()
 	carProvider := NewHlfCarProvider(stub)
 	carUsecase := usecases.NewCarUsecase(&carProvider)
+	fmt.Printf("requested chaincode function %s", function)
 	if function == "delete" {
 		// Deletes an entity from its state
 		return t.delete(stub, args)
