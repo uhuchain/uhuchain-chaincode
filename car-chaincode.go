@@ -77,7 +77,7 @@ func (t *CarChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	} else if function == "saveCar" {
 		return t.saveCar(stub, carUsecase, args)
 	} else if function == "getCar" {
-		return t.saveCar(stub, carUsecase, args)
+		return t.getCar(stub, carUsecase, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"delete\" \"query\"")
@@ -105,7 +105,7 @@ func (t *CarChaincode) saveCar(stub shim.ChaincodeStubInterface, usecase *usecas
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting ")
 	}
-	carValue := []byte(args[1])
+	carValue := []byte(args[0])
 	car := models.Car{}
 	err := car.UnmarshalBinary(carValue)
 	if err != nil {
@@ -122,7 +122,7 @@ func (t *CarChaincode) getCar(stub shim.ChaincodeStubInterface, usecase *usecase
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting ")
 	}
-	carID, err := strconv.ParseInt(args[1], 10, 64)
+	carID, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
 		return shim.Error(err.Error())
 	}

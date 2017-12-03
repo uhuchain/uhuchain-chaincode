@@ -262,7 +262,7 @@
   branch = "master"
   name = "github.com/uhuchain/uhuchain-core"
   packages = ["interfaces","models","usecases"]
-  revision = "ae06c9840f87f8fa4d19741605f4caf20ae78df4"
+  revision = "604b352d0a04eac07a0ee813e147f56393b61a49"
 
 [[projects]]
   branch = "master"
