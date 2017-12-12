@@ -11,11 +11,10 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/uhuchain/uhuchain-core/models"
+	"github.com/uhuchain/uhuchain-core/controller"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
-	"github.com/uhuchain/uhuchain-core/usecases"
 )
 
 // CarChaincode example simple Chaincode implementation
@@ -66,21 +65,13 @@ func (t *CarChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Println("car chaincode Invoke")
 	function, args := stub.GetFunctionAndParameters()
 	carProvider := NewHlfCarProvider(stub)
-	carUsecase := usecases.NewCarUsecase(&carProvider)
-	fmt.Printf("requested chaincode function %s", function)
-	if function == "delete" {
-		// Deletes an entity from its state
-		return t.delete(stub, args)
-	} else if function == "query" {
-		// the old "Query" is now implemtned in invoke
-		return t.query(stub, args)
-	} else if function == "saveCar" {
-		return t.saveCar(stub, carUsecase, args)
-	} else if function == "getCar" {
-		return t.getCar(stub, carUsecase, args)
-	}
+	carController := controller.NewCarController(&carProvider)
+	result, err := carController.Run(function, args)
 
-	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"delete\" \"query\"")
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(result)
 }
 
 // Deletes an entity from state
@@ -98,43 +89,6 @@ func (t *CarChaincode) delete(stub shim.ChaincodeStubInterface, args []string) p
 	}
 
 	return shim.Success(nil)
-}
-
-// Write a car with a given ID onto the ledger
-func (t *CarChaincode) saveCar(stub shim.ChaincodeStubInterface, usecase *usecases.CarUsecase, args []string) pb.Response {
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting ")
-	}
-	carValue := []byte(args[0])
-	car := models.Car{}
-	err := car.UnmarshalBinary(carValue)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	err = usecase.SaveCar(car)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	return shim.Success(nil)
-}
-
-func (t *CarChaincode) getCar(stub shim.ChaincodeStubInterface, usecase *usecases.CarUsecase, args []string) pb.Response {
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting ")
-	}
-	carID, err := strconv.ParseInt(args[0], 10, 64)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	car, err := usecase.GetCar(carID)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	carValue, err := car.MarshalBinary()
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	return shim.Success(carValue)
 }
 
 // query callback representing the query of a chaincode
@@ -167,6 +121,6 @@ func (t *CarChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb
 func main() {
 	err := shim.Start(new(CarChaincode))
 	if err != nil {
-		fmt.Printf("Error starting Simple chaincode: %s", err)
+		fmt.Printf("Error starting car chaincode: %s", err)
 	}
 }
