@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -39,6 +40,9 @@ func (p *HlfCarProvider) GetCar(id int64) (models.Car, error) {
 	if err != nil {
 		return car, err
 	}
-	err = car.UnmarshalBinary(carValue)
-	return car, err
+	if len(carValue) == 0 {
+		return car, fmt.Errorf("Code 404 - No entry found for key %d", id)
+	}
+	car.UnmarshalBinary(carValue)
+	return car, nil
 }
